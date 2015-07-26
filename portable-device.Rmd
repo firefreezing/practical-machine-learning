@@ -1,0 +1,90 @@
+---
+title: "Prediction Assignment - Portable Device"
+date: "Sunday, July 26, 2015"
+output: html_document
+---
+
+```{r, warning=F, message=F}
+library(caret)
+library(dplyr)
+```
+
+Load training and testing datasets:
+```{r}
+setwd("D:/MOOC video/Practical Machine Learning/project/data")
+train <- read.csv("pml-training.csv")
+test <- read.csv("pml-testing.csv")
+```
+
+Take a quick look at the distribution of the outcome variable in the 
+training data. And there is no imbalanced class.
+```{r}
+table(train$classe)
+```
+
+We notice missing values in the datasets are not labeled as `NA`. 
+Hence we fix this using the following code:
+```{r}
+train[train == ""] <- NA
+test[test == ""] <- NA
+```
+
+Next, we take a look at the magnitude of missingness for each potential
+predictors. There are 100 variables having 98% of the missing data in the training set and they should be dropped due to significantly missing information.  
+```{r}
+pctNA <- round(colSums(is.na(train))/dim(train)[1], 2)
+table(pctNA)
+```
+
+```{r}
+varList <- names(pctNA)[pctNA == 0]
+train1 <- subset(train, select = varList) 
+test1 <- subset(test, select = setdiff(varList, "classe")) 
+```
+
+Find out variables with low data variations. And it seems we need to 
+remove `new_window` from the predictor list due to low data variation.
+```{r}
+nzv <- nearZeroVar(train1, saveMetrics = T)
+nzv[which(nzv$nzv == "TRUE" | nzv$zeroVar == "TRUE"),]
+```
+
+Also, by checking the data, the following variables are not relevant to the manner prediction: `X`, `raw_timestamp_part_1`, `raw_timestamp_part_2`, and `cvtd_timestamp`. Hence, we remove them also from the predictor list: 
+```{r}
+varList <- setdiff(varList, c("X", "raw_timestamp_part_1",
+                              "raw_timestamp_part_2", 
+                              "cvtd_timestamp",
+                              "new_window"))
+```
+
+Therefore, we get the final training data and testing data:
+```{r}
+train1 <- subset(train, select = varList) 
+test1 <- subset(test, select = setdiff(varList, "classe")) 
+```
+
+We apply 10-fold cross-validation in the model tuning. 
+```{r}
+set.seed(1234)
+fitCtrl <- trainControl( # 10 fold CV
+    method = "cv",
+    number = 10
+)
+```
+
+And we use random forest as the learner for this data.
+```{r, cache=T}
+myFit <- train(classe ~ ., data = train1,
+               method = "rf", trControl = fitCtrl)
+
+myFit
+```
+
+And we see from the output that random forest has a great predictive performance. So we take it as our final predictive model. 
+
+Here is the predicted result on the testing data:
+```{r}
+pred <- predict(myFit, newdata = test1)
+pred
+```
+
