@@ -80,7 +80,7 @@ myFit <- train(classe ~ ., data = train1,
 myFit
 ```
 
-And we see from the output that random forest has a great predictive performance. So we take it as our final predictive model. 
+And we see from the output that random forest has a great predictive performance, where out of sample error is measured by accuracy metric - agreement percentage between the true activity quality and the predicted activity. Therefore, we decide to use it as our final predictive model. 
 
 Here is the predicted result on the testing data:
 ```{r}
